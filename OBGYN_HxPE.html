@@ -1,0 +1,1793 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>OB History &amp; PE · Digital Form</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;0,8..60,500;1,8..60,300;1,8..60,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+  /* ═══════════ THEME TOKENS ═══════════ */
+  :root, html[data-theme="light"] {
+    --bg:#f5f2eb;
+    --bg2:#ffffff;
+    --bg3:#faf8f4;
+    --bg4:#ede9e0;
+    --border:rgba(30,28,23,.08);
+    --border2:rgba(30,28,23,.15);
+    --text:#1e1c17;
+    --text2:#5d5748;
+    --text3:#96907e;
+    --gold:#a8862e;
+    --gold2:#c9a84c;
+    --gold-dim:rgba(168,134,46,.10);
+    --gold-bg:#fbf7ea;
+    --ok:#2e7d4f;
+    --err:#b3261e;
+    --shadow-sm:0 1px 2px rgba(30,28,23,.05), 0 1px 3px rgba(30,28,23,.06);
+    --shadow-md:0 4px 12px rgba(30,28,23,.08), 0 2px 4px rgba(30,28,23,.05);
+    --shadow-lg:0 10px 32px rgba(30,28,23,.14), 0 4px 10px rgba(30,28,23,.08);
+    --noise-opacity:.25;
+    --noise-blend:multiply;
+    --sidebar-bg:rgba(255,255,255,.94);
+    --sidebar-shadow:1px 0 3px rgba(30,28,23,.04);
+    --backdrop:rgba(30,28,23,.35);
+    --btn-hero-text:#1e1c17;
+    --toast-ok-bg:rgba(76,173,110,.10);
+    --toast-err-bg:rgba(179,38,30,.10);
+  }
+  html[data-theme="dark"] {
+    --bg:#0b0b0e;
+    --bg2:#12121a;
+    --bg3:#191923;
+    --bg4:#21212f;
+    --border:rgba(255,255,255,.07);
+    --border2:rgba(255,255,255,.13);
+    --text:#e6e2d6;
+    --text2:#9c9880;
+    --text3:#6b6855;
+    --gold:#c9a84c;
+    --gold2:#e8c96a;
+    --gold-dim:rgba(201,168,76,.12);
+    --gold-bg:rgba(201,168,76,.06);
+    --ok:#4cad6e;
+    --err:#c94c4c;
+    --shadow-sm:0 1px 3px rgba(0,0,0,.5);
+    --shadow-md:0 4px 14px rgba(0,0,0,.6);
+    --shadow-lg:0 10px 32px rgba(0,0,0,.75);
+    --noise-opacity:.35;
+    --noise-blend:screen;
+    --sidebar-bg:rgba(18,18,26,.96);
+    --sidebar-shadow:none;
+    --backdrop:rgba(0,0,0,.6);
+    --btn-hero-text:#0b0b0e;
+    --toast-ok-bg:rgba(76,173,110,.08);
+    --toast-err-bg:rgba(201,76,76,.08);
+  }
+
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--bg); color:var(--text);
+    font-family:'Source Serif 4', Georgia, serif;
+    font-size:14.5px; line-height:1.6;
+    min-height:100vh;
+    transition:background .28s ease, color .28s ease;
+  }
+  body::before{
+    content:''; position:fixed; inset:0;
+    background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events:none; z-index:0;
+    opacity:var(--noise-opacity);
+    mix-blend-mode:var(--noise-blend);
+    transition:opacity .28s ease;
+  }
+
+  /* ═══════════ SIDEBAR ═══════════ */
+  .sidebar{
+    position:fixed; top:0; left:0; height:100vh;
+    width:var(--sb-current);
+    background:var(--sidebar-bg);
+    backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+    border-right:1px solid var(--border2);
+    z-index:900; display:flex; flex-direction:column;
+    transition:width .28s cubic-bezier(.4,0,.2,1), background .28s ease;
+    overflow:hidden;
+    box-shadow:var(--sidebar-shadow);
+  }
+  body.sb-collapsed .sidebar{ --sb-current:64px; }
+  body:not(.sb-collapsed) .sidebar{ --sb-current:240px; }
+
+  .sb-header{
+    display:flex; align-items:center; gap:10px;
+    padding:16px 14px; border-bottom:1px solid var(--border);
+    flex-shrink:0;
+  }
+  .sb-toggle{
+    width:36px; height:36px; border-radius:8px;
+    background:transparent; border:1px solid var(--border2);
+    color:var(--gold); font-size:16px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    transition:all .18s ease; flex-shrink:0;
+  }
+  .sb-toggle:hover{ background:var(--gold-dim); border-color:var(--gold); }
+  .sb-brand{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px; letter-spacing:.16em; text-transform:uppercase;
+    color:var(--gold); white-space:nowrap;
+    opacity:1; transition:opacity .15s; font-weight:600;
+  }
+  body.sb-collapsed .sb-brand{ opacity:0; }
+
+  .sb-progress{
+    padding:14px 18px 10px; flex-shrink:0;
+    border-bottom:1px solid var(--border);
+  }
+  body.sb-collapsed .sb-progress{ padding:14px 10px 10px; }
+  .sb-progress-label{
+    font-family:'JetBrains Mono', monospace;
+    font-size:9.5px; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--text3); margin-bottom:6px;
+    display:flex; justify-content:space-between;
+    white-space:nowrap; overflow:hidden;
+  }
+  body.sb-collapsed .sb-progress-label{ opacity:0; height:0; margin:0; }
+  .sb-progress-track{
+    height:3px; background:var(--bg4); border-radius:2px; overflow:hidden;
+  }
+  .sb-progress-fill{
+    height:100%; width:0%;
+    background:linear-gradient(90deg, var(--gold), var(--gold2));
+    border-radius:2px; transition:width .35s ease;
+  }
+
+  .sb-menu{
+    list-style:none; padding:8px 8px 16px; margin:0;
+    flex:1; overflow-y:auto; overflow-x:hidden;
+    scrollbar-width:thin; scrollbar-color:rgba(168,134,46,.3) transparent;
+  }
+  .sb-menu::-webkit-scrollbar{ width:4px; }
+  .sb-menu::-webkit-scrollbar-thumb{ background:rgba(168,134,46,.3); border-radius:2px; }
+
+  .sb-step{
+    display:flex; align-items:center; gap:12px;
+    padding:9px 10px; border-radius:8px;
+    color:var(--text2); font-size:12px;
+    cursor:pointer; transition:all .18s ease;
+    white-space:nowrap; overflow:hidden;
+    border:1px solid transparent;
+    background:transparent; width:100%; text-align:left;
+    font-family:inherit; margin-bottom:2px;
+  }
+  .sb-step:hover{ background:var(--gold-dim); color:var(--gold); }
+  .sb-step.active{
+    background:var(--gold-dim); color:var(--gold);
+    border-color:rgba(168,134,46,.35);
+    font-weight:600;
+  }
+  .sb-step.completed .sb-num{
+    background:var(--ok); color:#ffffff; border-color:var(--ok);
+  }
+  .sb-num{
+    width:24px; height:24px; border-radius:50%;
+    border:1px solid var(--border2);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px; font-weight:600;
+    flex-shrink:0; transition:all .18s;
+    color:var(--text2);
+    background:var(--bg3);
+  }
+  .sb-step.active .sb-num{
+    background:var(--gold); color:#ffffff; border-color:var(--gold);
+    transform:scale(1.08);
+  }
+  .sb-icon{ font-size:15px; line-height:1; flex-shrink:0; display:none; }
+  body.sb-collapsed .sb-icon{ display:block; }
+  body.sb-collapsed .sb-num{ display:none; }
+  .sb-label{
+    font-size:12px; letter-spacing:.02em;
+    opacity:1; transition:opacity .15s;
+    overflow:hidden; text-overflow:ellipsis;
+  }
+  body.sb-collapsed .sb-label{ opacity:0; width:0; }
+  body.sb-collapsed .sb-step{ justify-content:center; padding:10px 8px; }
+
+  .sb-footer{
+    padding:10px 8px 14px;
+    border-top:1px solid var(--border);
+    flex-shrink:0;
+    display:flex; flex-direction:column; gap:4px;
+  }
+  .sb-reset{
+    display:flex; align-items:center; gap:12px;
+    padding:9px 10px; border-radius:8px;
+    color:var(--err); font-size:12px;
+    cursor:pointer; transition:all .18s;
+    background:transparent; border:1px solid transparent;
+    font-family:inherit; width:100%; text-align:left;
+    white-space:nowrap; overflow:hidden;
+  }
+  .sb-reset:hover{ background:rgba(179,38,30,.08); border-color:rgba(179,38,30,.25); }
+  body.sb-collapsed .sb-reset{ justify-content:center; padding:10px 8px; }
+  body.sb-collapsed .sb-reset .sb-label{ opacity:0; width:0; }
+  .sb-reset .sb-icon{ display:block; font-size:16px; flex-shrink:0; }
+  .sb-reset .sb-label{ opacity:1; }
+
+  /* Theme toggle variant */
+  .theme-toggle{ color:var(--text2); }
+  .theme-toggle:hover{
+    background:var(--gold-dim);
+    border-color:rgba(168,134,46,.35);
+    color:var(--gold);
+  }
+
+  /* ═══════════ MAIN ═══════════ */
+  .main{
+    padding:32px 40px 140px;
+    max-width:1160px;
+    margin:0 auto;
+    position:relative; z-index:1;
+    transition:padding-left .28s cubic-bezier(.4,0,.2,1);
+  }
+  body.sb-collapsed .main{ padding-left:calc(64px + 40px); }
+  body:not(.sb-collapsed) .main{ padding-left:calc(240px + 40px); }
+
+  .page-header{
+    border-bottom:1px solid var(--border2);
+    padding-bottom:20px; margin-bottom:26px;
+    position:relative;
+  }
+  .page-header::after{
+    content:''; position:absolute; bottom:-1px; left:0;
+    width:70px; height:2px; background:var(--gold);
+  }
+  .eyebrow{
+    font-family:'JetBrains Mono', monospace;
+    font-size:10px; letter-spacing:.2em; text-transform:uppercase;
+    color:var(--gold); margin-bottom:4px; font-weight:600;
+  }
+  .page-title{
+    font-family:'Playfair Display', serif;
+    font-size:clamp(22px, 3vw, 32px); font-weight:700;
+    line-height:1.15; color:var(--text);
+  }
+  .page-title em{ font-style:italic; color:var(--gold); }
+  .page-sub{
+    font-size:13px; color:var(--text2); font-style:italic; margin-top:4px;
+  }
+
+  .step-header{
+    display:flex; align-items:center; gap:14px;
+    margin-bottom:20px; flex-wrap:wrap;
+  }
+  .step-badge{
+    font-family:'JetBrains Mono', monospace;
+    font-size:10px; letter-spacing:.14em;
+    text-transform:uppercase;
+    background:var(--gold-bg); color:var(--gold);
+    padding:4px 12px; border-radius:20px;
+    border:1px solid rgba(168,134,46,.28);
+    font-weight:600;
+  }
+  .step-title{
+    font-family:'Playfair Display', serif;
+    font-size:20px; font-weight:600; color:var(--text);
+    flex:1; min-width:180px;
+  }
+  .step-counter{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px; color:var(--text3); letter-spacing:.1em;
+  }
+
+  .section-card{
+    background:var(--bg2);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:24px 28px 26px;
+    box-shadow:var(--shadow-sm);
+    animation:slideIn .35s ease-out;
+    transition:background .28s ease;
+  }
+  @keyframes slideIn{
+    from{ opacity:0; transform:translateY(8px); }
+    to{ opacity:1; transform:translateY(0); }
+  }
+  .form-step{ display:none; }
+  .form-step.active{ display:block; }
+
+  .form-layout{
+    display:grid;
+    grid-template-columns: minmax(0, 1fr) 280px;
+    gap: 28px;
+    align-items: start;
+  }
+  .form-content{ min-width: 0; }
+
+  .form-row{
+    display:flex; flex-wrap:wrap; gap:12px 18px;
+    margin-bottom:12px; align-items:flex-start;
+  }
+  .form-group{
+    display:flex; flex-direction:column;
+    flex:1 0 180px; min-width:130px;
+  }
+  .form-group.full{ flex:1 0 100%; }
+  .form-group.half{ flex:1 0 calc(50% - 9px); min-width:180px; }
+  .form-group.third{ flex:1 0 calc(33.33% - 12px); min-width:130px; }
+  .form-group.quarter{ flex:1 0 calc(25% - 14px); min-width:110px; }
+
+  .form-group label{
+    font-family:'JetBrains Mono', monospace;
+    font-size:9.5px; letter-spacing:.13em; text-transform:uppercase;
+    color:var(--text3); margin-bottom:4px;
+  }
+  input, select, textarea{
+    background:var(--bg3);
+    border:1px solid var(--border2);
+    border-radius:6px;
+    color:var(--text);
+    font-family:'Source Serif 4', Georgia, serif;
+    font-size:13.5px;
+    padding:8px 11px;
+    transition:border-color .2s, box-shadow .2s, background .2s, color .2s;
+    width:100%; outline:none;
+  }
+  input::placeholder, textarea::placeholder{ color:var(--text3); opacity:.7; }
+  input:hover, select:hover, textarea:hover{ border-color:rgba(168,134,46,.35); }
+  input:focus, select:focus, textarea:focus{
+    border-color:var(--gold);
+    background:var(--bg2);
+    box-shadow:0 0 0 3px rgba(168,134,46,.14);
+  }
+  input[readonly]{
+    background:var(--gold-bg); cursor:default;
+    color:var(--gold); font-weight:600;
+    border-color:rgba(168,134,46,.25);
+  }
+  textarea{ resize:vertical; min-height:48px; font-size:13px; line-height:1.5; }
+  .inline-group{
+    display:flex; flex-wrap:wrap; gap:8px 12px; align-items:center;
+  }
+  .inline-group input{ flex:1; }
+
+  .howto{
+    background:var(--gold-bg);
+    border:1px solid rgba(168,134,46,.22);
+    border-radius:6px;
+    padding:16px 16px 18px;
+    font-size:12.5px;
+    color:var(--text2);
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    position:sticky;
+    top:20px;
+    box-shadow:var(--shadow-sm);
+    transition:background .28s ease;
+  }
+  .howto .icon{
+    font-size:22px;
+    line-height:1;
+    color:var(--gold);
+    margin-bottom:2px;
+  }
+  .howto strong{ color:var(--gold); font-weight:600; }
+  .howto code{
+    font-family:'JetBrains Mono', monospace;
+    background:var(--bg2); padding:1px 5px;
+    border-radius:3px; font-size:11px;
+    color:var(--gold);
+    border:1px solid rgba(168,134,46,.18);
+  }
+
+  .ob-table-wrap{ overflow-x:auto; margin-top:6px; }
+  .ob-table{
+    width:100%; border-collapse:collapse; font-size:12.5px;
+    min-width:520px;
+  }
+  .ob-table th, .ob-table td{
+    border:1px solid var(--border2);
+    padding:5px 6px; text-align:center; vertical-align:middle;
+  }
+  .ob-table th{
+    background:var(--bg4);
+    font-family:'JetBrains Mono', monospace;
+    font-size:9px; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--text2); font-weight:600;
+  }
+  .ob-table td{ background:var(--bg2); }
+  .ob-table td input{
+    background:transparent; border:none; text-align:center;
+    font-size:12px; padding:3px 4px; width:100%; color:var(--text);
+    font-family:inherit;
+  }
+  .ob-table td input:focus{ background:var(--gold-bg); border-radius:3px; box-shadow:none; }
+  .ob-table .g-label{
+    font-family:'JetBrains Mono', monospace;
+    font-size:10px; color:var(--gold); font-weight:700;
+    background:var(--gold-bg);
+  }
+
+  .lab-grid{
+    display:grid; grid-template-columns:1fr 1fr 1fr;
+    gap:14px; margin-top:6px;
+  }
+  .lab-box{
+    background:var(--bg3); border-radius:6px;
+    padding:14px 16px; border:1px solid var(--border);
+  }
+  .lab-box h4{
+    font-family:'JetBrains Mono', monospace;
+    font-size:10px; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--gold); margin-bottom:8px; font-weight:600;
+  }
+  .lab-row{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:3px 0; border-bottom:1px solid var(--border); gap:8px;
+  }
+  .lab-row:last-child{ border-bottom:none; }
+  .lab-row .lab-label{ color:var(--text2); font-size:12px; flex:0 0 auto; }
+  .lab-row input{
+    background:transparent; border:none; text-align:right;
+    font-size:13px; padding:2px 4px; color:var(--text);
+    font-family:inherit; max-width:110px;
+  }
+  .lab-row input:focus{ background:var(--bg2); border-radius:3px; box-shadow:none; }
+
+  .icd-search-wrap{ position:relative; }
+  .icd-suggestions{
+    position:absolute; top:100%; left:0; right:0;
+    background:var(--bg2);
+    border:1px solid var(--border2); border-top:none;
+    border-radius:0 0 6px 6px;
+    max-height:220px; overflow-y:auto;
+    z-index:40; display:none;
+    box-shadow:var(--shadow-lg);
+  }
+  .icd-suggestions.show{ display:block; }
+  .suggestion-item{
+    padding:8px 14px; cursor:pointer; font-size:12.5px;
+    border-bottom:1px solid var(--border); color:var(--text2);
+    display:flex; justify-content:space-between; gap:12px; align-items:center;
+    transition:background .12s;
+  }
+  .suggestion-item:hover{ background:var(--gold-bg); color:var(--text); }
+  .suggestion-item:last-child{ border-bottom:none; }
+  .suggestion-item .code{
+    font-family:'JetBrains Mono', monospace;
+    color:var(--gold); font-weight:600; font-size:11px; flex-shrink:0;
+  }
+  .suggestion-item .desc{ flex:1; text-align:left; }
+  .suggestion-item .system{
+    font-size:9px; color:var(--text3);
+    padding:2px 7px; border-radius:3px;
+    background:var(--bg4); border:1px solid var(--border);
+    flex-shrink:0;
+  }
+  .icd-selected{
+    display:flex; flex-wrap:wrap; gap:6px;
+    padding:8px 0; min-height:36px;
+  }
+  .icd-empty{
+    color:var(--text3); font-size:12px; font-style:italic;
+    padding:6px 0;
+  }
+  .icd-pill{
+    display:inline-flex; align-items:center; gap:8px;
+    background:var(--gold-bg); border:1px solid rgba(168,134,46,.28);
+    border-radius:20px; padding:4px 8px 4px 12px;
+    font-size:12px; color:var(--text);
+    animation:popIn .2s ease-out;
+  }
+  @keyframes popIn{ from{ transform:scale(.85); opacity:0; } to{ transform:scale(1); opacity:1; } }
+  .icd-pill .code{
+    font-family:'JetBrains Mono', monospace;
+    color:var(--gold); font-weight:600; font-size:11px;
+  }
+  .icd-pill .remove{
+    background:none; border:none; color:var(--text3);
+    cursor:pointer; font-size:14px; line-height:1;
+    padding:0 4px; transition:color .15s;
+  }
+  .icd-pill .remove:hover{ color:var(--err); }
+
+  /* ═══════════ FIXED ACTION BUTTONS ═══════════ */
+  .fixed-actions{
+    position:fixed; bottom:24px; right:24px;
+    z-index:1000;
+    display:flex; flex-direction:column;
+    gap:12px; align-items:flex-end;
+    pointer-events:none;
+  }
+  .fixed-actions > *{ pointer-events:auto; }
+
+  .action-row{ display:flex; align-items:center; gap:10px; }
+
+  .action-label{
+    font-family:'JetBrains Mono', monospace;
+    font-size:10px; letter-spacing:.03em;
+    padding:8px 14px; border-radius:24px;
+    background:var(--sidebar-bg);
+    backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+    border:1px solid rgba(168,134,46,.28);
+    color:var(--gold);
+    white-space:nowrap;
+    box-shadow:var(--shadow-md);
+    max-width:260px;
+    overflow:hidden; text-overflow:ellipsis;
+    transition:border-color .18s ease, background .28s ease;
+    font-weight:600;
+  }
+
+  .circle-btn{
+    width:52px; height:52px; border-radius:50%;
+    border:none; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'JetBrains Mono', monospace;
+    font-weight:700; font-size:20px; line-height:1;
+    flex-shrink:0;
+    transition:transform .18s ease, box-shadow .18s ease,
+               background .18s ease, border-color .18s ease, color .18s ease;
+  }
+  .circle-btn:hover{ transform:translateY(-2px) scale(1.05); }
+  .circle-btn:active{ transform:translateY(0) scale(1); }
+  .circle-btn:disabled{
+    opacity:.35; cursor:not-allowed;
+    transform:none !important;
+    filter:grayscale(.4);
+  }
+
+  .circle-back{
+    width:44px; height:44px;
+    background:var(--bg2);
+    border:1px solid var(--border2);
+    color:var(--text2);
+    font-size:16px;
+    box-shadow:var(--shadow-sm);
+  }
+  .circle-back:hover{
+    border-color:var(--gold);
+    color:var(--gold);
+    background:var(--gold-bg);
+    box-shadow:var(--shadow-md);
+  }
+
+  .circle-proceed{
+    width:56px; height:56px;
+    background:linear-gradient(135deg, #e8c96a 0%, #c9a84c 100%);
+    color:var(--btn-hero-text);
+    box-shadow:0 6px 20px rgba(168,134,46,.35), 0 2px 4px rgba(30,28,23,.08);
+    font-size:22px;
+  }
+  .circle-proceed:hover{
+    box-shadow:0 10px 28px rgba(168,134,46,.5), 0 3px 6px rgba(30,28,23,.1);
+    background:linear-gradient(135deg, #f0d580 0%, #d4b356 100%);
+  }
+  .circle-proceed.complete{
+    background:linear-gradient(135deg, #6bcb8a 0%, #4cad6e 100%);
+    color:#ffffff;
+    box-shadow:0 6px 20px rgba(76,173,110,.4), 0 2px 4px rgba(30,28,23,.08);
+  }
+  .circle-proceed.complete:hover{
+    box-shadow:0 10px 28px rgba(76,173,110,.55), 0 3px 6px rgba(30,28,23,.1);
+  }
+
+  .circle-docx{
+    width:58px; height:58px;
+    background:var(--bg2);
+    border:2px solid var(--gold);
+    color:var(--gold);
+    font-size:10px; letter-spacing:.06em;
+    box-shadow:
+      0 6px 20px rgba(30,28,23,.10),
+      0 2px 4px rgba(30,28,23,.06),
+      0 0 0 4px rgba(168,134,46,.08);
+  }
+  html[data-theme="dark"] .circle-docx{
+    box-shadow:
+      0 6px 20px rgba(0,0,0,.5),
+      0 0 0 4px rgba(201,168,76,.08);
+  }
+  .circle-docx:hover{
+    background:var(--gold-bg);
+    color:var(--gold);
+    border-color:var(--gold2);
+    box-shadow:
+      0 10px 26px rgba(30,28,23,.14),
+      0 3px 6px rgba(30,28,23,.08),
+      0 0 0 4px rgba(168,134,46,.18);
+  }
+  .circle-docx .docx-text{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px; font-weight:700; letter-spacing:.08em;
+  }
+
+  /* ═══════════ TOAST ═══════════ */
+  .toast{
+    position:fixed; bottom:160px; left:50%;
+    transform:translateX(-50%) translateY(20px);
+    background:var(--bg2);
+    border:1px solid var(--border2);
+    border-radius:10px;
+    padding:14px 24px; color:var(--text); font-size:13px;
+    z-index:2000; opacity:0; pointer-events:none;
+    transition:opacity .3s ease, transform .3s ease, background .28s ease;
+    max-width:90vw; text-align:center;
+    box-shadow:var(--shadow-lg);
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); pointer-events:all; }
+  .toast.ok{ border-color:rgba(76,173,110,.5); background:var(--toast-ok-bg); }
+  .toast.err{ border-color:rgba(179,38,30,.4); background:var(--toast-err-bg); }
+  .toast-close{
+    margin-left:14px; background:none; border:none;
+    color:var(--text3); cursor:pointer; font-size:15px;
+  }
+
+  .spin{
+    display:inline-block; width:16px; height:16px;
+    border:2px solid rgba(30,28,23,.18);
+    border-top-color:var(--text); border-radius:50%;
+    animation:spin .7s linear infinite;
+  }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+
+  /* ═══════════ RESPONSIVE ═══════════ */
+  @media (max-width:900px){
+    .lab-grid{ grid-template-columns:1fr; }
+  }
+  @media (max-width:1000px){
+    .form-layout{
+      grid-template-columns: 1fr;
+      gap: 18px;
+    }
+    .howto{
+      position: static;
+      flex-direction: row;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px 14px;
+    }
+    .howto .icon{ font-size: 18px; margin-bottom: 0; margin-top: 1px; }
+  }
+  @media (max-width:768px){
+    .sidebar{
+      transform:translateX(-100%);
+      width:240px !important;
+      transition:transform .28s cubic-bezier(.4,0,.2,1);
+      box-shadow:8px 0 32px rgba(30,28,23,.2);
+    }
+    .sidebar.open{ transform:translateX(0); }
+    body.sb-collapsed .sidebar{ --sb-current:240px; }
+    body.sb-collapsed .sb-label,
+    body.sb-collapsed .sb-brand,
+    body.sb-collapsed .sb-progress-label{ opacity:1; width:auto; height:auto; margin:initial; }
+    body.sb-collapsed .sb-num{ display:flex; }
+    body.sb-collapsed .sb-icon{ display:none; }
+    body.sb-collapsed .sb-step{ justify-content:flex-start; padding:9px 10px; }
+
+    .main{ padding:20px 16px 160px; }
+    body.sb-collapsed .main,
+    body:not(.sb-collapsed) .main{ padding-left:16px; }
+    .section-card{ padding:18px 16px 20px; }
+    .form-group.half,
+    .form-group.third,
+    .form-group.quarter{ flex:1 0 100%; }
+
+    .mobile-menu-btn{
+      display:flex !important;
+      position:fixed; top:14px; left:14px;
+      width:42px; height:42px; border-radius:10px;
+      background:var(--bg2); border:1px solid var(--border2);
+      color:var(--gold); font-size:18px;
+      align-items:center; justify-content:center;
+      cursor:pointer; z-index:1000;
+      box-shadow:var(--shadow-md);
+    }
+
+    .fixed-actions{ bottom:16px; right:16px; gap:10px; }
+    .circle-btn{ width:46px; height:46px; font-size:18px; }
+    .circle-back{ width:40px; height:40px; font-size:15px; }
+    .circle-proceed{ width:50px; height:50px; font-size:19px; }
+    .circle-docx{ width:52px; height:52px; }
+    .circle-docx .docx-text{ font-size:10px; }
+    .action-label{
+      font-size:9px;
+      padding:6px 10px;
+      max-width:150px;
+    }
+  }
+  .mobile-menu-btn{ display:none; }
+
+  .sb-backdrop{
+    position:fixed; inset:0;
+    background:var(--backdrop);
+    backdrop-filter:blur(2px);
+    z-index:880;
+    opacity:0; pointer-events:none;
+    transition:opacity .28s ease;
+  }
+  body.sb-mobile-open .sb-backdrop{ opacity:1; pointer-events:all; }
+
+  .ob-hint-row{
+    font-family:'JetBrains Mono', monospace;
+    font-size:10px; color:var(--text3);
+    letter-spacing:.08em; margin-top:6px;
+  }
+</style>
+<script>
+  /* Apply theme immediately (before paint) to avoid flash */
+  (function(){
+    try {
+      var t = localStorage.getItem('ob-theme') || 'light';
+      document.documentElement.setAttribute('data-theme', t);
+    } catch(e) {
+      document.documentElement.setAttribute('data-theme', 'light');
+    }
+  })();
+</script>
+</head>
+<body class="sb-collapsed">
+
+<button class="mobile-menu-btn" id="mobileMenuBtn" onclick="toggleMobileSidebar()" aria-label="Menu">☰</button>
+
+<!-- ═══════════ SIDEBAR ═══════════ -->
+<aside class="sidebar" id="sidebar">
+  <div class="sb-header">
+    <button class="sb-toggle" id="sbToggle" onclick="toggleSidebar()" title="Toggle sidebar">☰</button>
+    <span class="sb-brand">OB Form</span>
+  </div>
+  <div class="sb-progress">
+    <div class="sb-progress-label">
+      <span>Progress</span>
+      <span id="sbProgressText">1 / 9</span>
+    </div>
+    <div class="sb-progress-track">
+      <div class="sb-progress-fill" id="sbProgressFill"></div>
+    </div>
+  </div>
+  <ul class="sb-menu" id="sbMenu"></ul>
+  <div class="sb-footer">
+    <!-- Theme toggle button -->
+    <button type="button" class="sb-reset theme-toggle" onclick="toggleTheme()" title="Toggle light / dark mode">
+      <span class="sb-icon" id="themeIcon">🌙</span>
+      <span class="sb-label" id="themeLabel">Dark Mode</span>
+    </button>
+    <!-- Reset button -->
+    <button type="button" class="sb-reset" onclick="resetForm()">
+      <span class="sb-icon">🔄</span>
+      <span class="sb-label">Reset Form</span>
+    </button>
+  </div>
+</aside>
+<div class="sb-backdrop" onclick="closeMobileSidebar()"></div>
+
+<!-- ═══════════ MAIN ═══════════ -->
+<main class="main">
+  <header class="page-header">
+    <div class="eyebrow">OB‑GYN · Digital Record</div>
+    <h1 class="page-title"><em>History &amp; Physical</em> Examination Form</h1>
+    <p class="page-sub">Problem‑Oriented Medical Record · Step-by-Step</p>
+  </header>
+
+  <form id="obForm" autocomplete="off">
+    <!-- STEP 1 -->
+    <section class="form-step active" data-step="0" id="step-patient">
+      <div class="step-header">
+        <span class="step-badge">Step 1</span>
+        <h2 class="step-title">Patient Information</h2>
+        <span class="step-counter" data-counter>1 / 9</span>
+      </div>
+      <div class="section-card">
+        <div class="form-layout">
+          <div class="form-content">
+            <div class="form-row">
+              <div class="form-group half"><label>Contact No.</label><input id="fContact" placeholder="e.g. 0917‑123‑4567" /></div>
+              <div class="form-group half"><label>Hospital #</label><input id="fHosp" placeholder="Chart / MR #" /></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group third"><label>Name</label><input id="fName" placeholder="Full name" /></div>
+              <div class="form-group third"><label>Date</label><input id="fDate" type="date" /></div>
+              <div class="form-group third"><label>Age</label><input id="fAge" type="number" placeholder="Years" /></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group full"><label>Address</label><input id="fAddress" placeholder="Street, City, Province" /></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group third"><label>Consultant</label><input id="fConsultant" placeholder="Attending physician" /></div>
+              <div class="form-group third"><label>Residents-in-Charge</label><input id="fResidents" placeholder="Resident(s)" /></div>
+              <div class="form-group third"><label>LMP</label><input id="fLmp" type="date" /></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group half"><label>AOG (auto)</label><input id="fAog" readonly placeholder="—" /></div>
+              <div class="form-group half"><label>EDC (auto)</label><input id="fEdc" type="date" /></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group half"><label>Sono Date</label><input id="fSonoDate" type="date" /></div>
+              <div class="form-group half"><label>Sono EGA</label><input id="fSonoEga" placeholder="32w4d" /></div>
+            </div>
+          </div>
+          <aside class="howto">
+            <span class="icon">⚡</span>
+            <div><strong>Auto‑Calculator:</strong> Enter <strong>LMP</strong> → EDC &amp; AOG auto-fill. Enter <strong>Sono Date</strong> + <strong>Sono EGA</strong> (e.g. <code>32w4d</code>) → EDC updates from ultrasound.</div>
+          </aside>
+        </div>
+      </div>
+    </section>
+
+    <!-- STEP 2 -->
+    <section class="form-step" data-step="1" id="step-cc">
+      <div class="step-header">
+        <span class="step-badge">Step 2</span>
+        <h2 class="step-title">Chief Complaint &amp; HPI</h2>
+        <span class="step-counter" data-counter>2 / 9</span>
+      </div>
+      <div class="section-card">
+        <div class="form-layout">
+          <div class="form-content">
+            <div class="form-row"><div class="form-group full"><label>Chief Complaint</label><textarea id="fCc" rows="3" placeholder="Primary reason for consult"></textarea></div></div>
+            <div class="form-row"><div class="form-group full"><label>1<sup>st</sup> Trimester</label><textarea id="fHpi1" rows="3" placeholder="Events, symptoms, complications"></textarea></div></div>
+            <div class="form-row"><div class="form-group full"><label>2<sup>nd</sup> Trimester</label><textarea id="fHpi2" rows="3" placeholder="Events, symptoms, complications"></textarea></div></div>
+            <div class="form-row"><div class="form-group full"><label>3<sup>rd</sup> Trimester</label><textarea id="fHpi3" rows="3" placeholder="Events, symptoms, complications"></textarea></div></div>
+          </div>
+          <aside class="howto">
+            <span class="icon">📋</span>
+            <div>Document the primary complaint and <strong>each trimester</strong> separately.</div>
+          </aside>
+        </div>
+      </div>
+    </section>
+
+    <!-- STEP 3 -->
+    <section class="form-step" data-step="2" id="step-history">
+      <div class="step-header">
+        <span class="step-badge">Step 3</span>
+        <h2 class="step-title">Past, Family &amp; Social</h2>
+        <span class="step-counter" data-counter>3 / 9</span>
+      </div>
+      <div class="section-card">
+        <div class="form-layout">
+          <div class="form-content">
+            <div class="form-row"><div class="form-group full"><label>Past Medical History</label><textarea id="fPmh" rows="3" placeholder="Medical conditions, surgeries, allergies"></textarea></div></div>
+            <div class="form-row"><div class="form-group full"><label>Family History</label><textarea id="fFh" rows="3" placeholder="Family illnesses, genetic conditions"></textarea></div></div>
+            <div class="form-row"><div class="form-group full"><label>Personal / Social History</label><textarea id="fSh" rows="3" placeholder="Smoking, alcohol, occupation, lifestyle"></textarea></div></div>
+          </div>
+          <aside class="howto">
+            <span class="icon">🧬</span>
+            <div>Include <strong>chronic conditions, surgeries, allergies</strong>, family history, and lifestyle factors.</div>
+          </aside>
+        </div>
+      </div>
+    </section>
+
+    <!-- STEP 4 -->
+    <section class="form-step" data-step="3" id="step-menstrual">
+      <div class="step-header">
+        <span class="step-badge">Step 4</span>
+        <h2 class="step-title">Menstrual &amp; Sexual History</h2>
+        <span class="step-counter" data-counter>4 / 9</span>
+      </div>
+      <div class="section-card">
+        <div class="form-layout">
+          <div class="form-content">
+            <div class="form-row">
+              <div class="form-group third"><label>Menarche (y/o)</label><input id="fMenarche" placeholder="e.g. 12" /></div>
+              <div class="form-group third"><label>Regular / Irregular</label><input id="fRegular" placeholder="Regular / Irregular" /></div>
+              <div class="form-group third"><label>Duration (days)</label><input id="fDuration" placeholder="e.g. 5" /></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group third"><label>Pads / day</label><input id="fPads" placeholder="e.g. 3" /></div>
+              <div class="form-group third"><label>Dysmenorrhea</label><input id="fDysmenorrhea" placeholder="Yes / No" /></div>
+              <div class="form-group third"><label>OCP use</label><input id="fOcp" placeholder="Yes / No" /></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group third"><label>1<sup>st</sup> sexual contact (age)</label><input id="fSexFirst" placeholder="e.g. 18" /></div>
+              <div class="form-group third"><label>Sexual partner(s)</label><input id="fSexPartner" placeholder="Single / Multiple" /></div>
+              <div class="form-group third"><label>STD history</label><input id="fStd" placeholder="Yes / No" /></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group half"><label>Dyspareunia</label><input id="fDyspareunia" placeholder="Yes / No" /></div>
+              <div class="form-group half"><label>PCB (post-coital bleeding)</label><input id="fPcb" placeholder="Yes / No" /></div>
+            </div>
+          </div>
+          <aside class="howto">
+            <span class="icon">🩸</span>
+            <div>Record <strong>menstrual pattern</strong>, contraceptive use, sexual history, and any symptoms.</div>
+          </aside>
+        </div>
+      </div>
+    </section>
+
+    <!-- STEP 5 -->
+    <section class="form-step" data-step="4" id="step-ob">
+      <div class="step-header">
+        <span class="step-badge">Step 5</span>
+        <h2 class="step-title">Obstetric History</h2>
+        <span class="step-counter" data-counter>5 / 9</span>
+      </div>
+      <div class="section-card">
+        <div class="form-layout">
+          <div class="form-content">
+            <div class="form-row">
+              <div class="form-group half"><label>G (Gravida)</label><input id="fGravida" type="number" placeholder="Total pregnancies" /></div>
+              <div class="form-group half"><label>P (Para)</label><input id="fPara" type="number" placeholder="Total deliveries" /></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group full">
+                <label>PNCU x ___ at ___ (Prenatal Care Unit)</label>
+                <div class="inline-group">
+                  <input id="fPncCount" type="number" placeholder="visits" style="flex:0 0 110px;" />
+                  <span style="color:var(--text3); font-size:12px;">at</span>
+                  <input id="fPncWhere" placeholder="Clinic / Hospital" />
+                </div>
+              </div>
+            </div>
+            <div class="ob-table-wrap">
+              <table class="ob-table">
+                <thead>
+                  <tr><th>G#</th><th>Year</th><th>Sex</th><th>Outcome</th><th>Mode</th><th>Place</th><th>FMC</th></tr>
+                </thead>
+                <tbody id="obTableBody"></tbody>
+              </table>
+            </div>
+            <div class="ob-hint-row">↑ Fill in only the rows that apply — leave others blank.</div>
+          </div>
+          <aside class="howto">
+            <span class="icon">👶</span>
+            <div>Fill <strong>G</strong> and <strong>P</strong>. Detail each pregnancy (year, sex, outcome, mode, place, FMC).</div>
+          </aside>
+        </div>
+      </div>
+    </section>
+
+    <!-- STEP 6 -->
+    <section class="form-step" data-step="5" id="step-pe">
+      <div class="step-header">
+        <span class="step-badge">Step 6</span>
+        <h2 class="step-title">Physical Examination</h2>
+        <span class="step-counter" data-counter>6 / 9</span>
+      </div>
+      <div class="section-card">
+        <div class="form-layout">
+          <div class="form-content">
+            <div class="form-row">
+              <div class="form-group third"><label>BP (mmHg)</label><input id="fBp" placeholder="120/80" /></div>
+              <div class="form-group third"><label>HR (bpm)</label><input id="fHr" type="number" placeholder="80" /></div>
+              <div class="form-group third"><label>RR (cpm)</label><input id="fRr" type="number" placeholder="18" /></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group third"><label>Temp (°C)</label><input id="fTemp" placeholder="37.0" /></div>
+            </div>
+            <div class="form-row"><div class="form-group full"><label>SHEENT</label><textarea id="fSheent" rows="2" placeholder="Head, eyes, ears, nose, throat"></textarea></div></div>
+            <div class="form-row"><div class="form-group full"><label>Chest / Lungs</label><textarea id="fChest" rows="2" placeholder="Breath sounds, symmetry"></textarea></div></div>
+            <div class="form-row"><div class="form-group full"><label>Heart</label><textarea id="fHeart" rows="2" placeholder="Rhythm, murmurs, sounds"></textarea></div></div>
+            <div class="form-row"><div class="form-group full"><label>Abdomen</label><textarea id="fAbdomen" rows="2" placeholder="Tenderness, distension, fetal position"></textarea></div></div>
+            <div class="form-row"><div class="form-group full"><label>Speculum</label><textarea id="fSpec" rows="2" placeholder="Cervix, discharge, lesions"></textarea></div></div>
+            <div class="form-row"><div class="form-group full"><label>Internal Exam (IE)</label><textarea id="fIe" rows="2" placeholder="Cervical dilatation, effacement, station"></textarea></div></div>
+            <div class="form-row"><div class="form-group full"><label>Extremities</label><textarea id="fExtrem" rows="2" placeholder="Edema, pulses, DVT signs"></textarea></div></div>
+            <div class="form-row"><div class="form-group full"><label>Others</label><textarea id="fOthers" rows="2" placeholder="Neurologic, skin, etc."></textarea></div></div>
+          </div>
+          <aside class="howto">
+            <span class="icon">🩺</span>
+            <div>Record <strong>vital signs</strong> and systematic findings using standard units.</div>
+          </aside>
+        </div>
+      </div>
+    </section>
+
+    <!-- STEP 7 -->
+    <section class="form-step" data-step="6" id="step-labs">
+      <div class="step-header">
+        <span class="step-badge">Step 7</span>
+        <h2 class="step-title">Laboratory Results</h2>
+        <span class="step-counter" data-counter>7 / 9</span>
+      </div>
+      <div class="section-card">
+        <div class="form-layout">
+          <div class="form-content">
+            <div class="lab-grid">
+              <div class="lab-box">
+                <h4>CBC</h4>
+                <div class="lab-row"><span class="lab-label">Hgb</span><input id="labHgb" placeholder="g/dL" /></div>
+                <div class="lab-row"><span class="lab-label">Hct</span><input id="labHct" placeholder="%" /></div>
+                <div class="lab-row"><span class="lab-label">WBC</span><input id="labWbc" placeholder="×10³/µL" /></div>
+                <div class="lab-row"><span class="lab-label">Plt</span><input id="labPlt" placeholder="×10³/µL" /></div>
+              </div>
+              <div class="lab-box">
+                <h4>Urinalysis</h4>
+                <div class="lab-row"><span class="lab-label">EC</span><input id="labEc" placeholder="epi cells" /></div>
+                <div class="lab-row"><span class="lab-label">PC</span><input id="labPc" placeholder="pus cells" /></div>
+                <div class="lab-row"><span class="lab-label">RBC</span><input id="labRbc" placeholder="red cells" /></div>
+                <div class="lab-row"><span class="lab-label">Bac</span><input id="labBac" placeholder="bacteria" /></div>
+              </div>
+              <div class="lab-box">
+                <h4>Others</h4>
+                <div class="lab-row"><span class="lab-label">Blood type</span><input id="labBlood" placeholder="A/B/AB/O" /></div>
+                <div class="lab-row"><span class="lab-label">HbsAg</span><input id="labHbsag" placeholder="+ / −" /></div>
+                <div class="lab-row"><span class="lab-label">VDRL/RPR</span><input id="labVdrl" placeholder="+ / −" /></div>
+                <div class="lab-row"><span class="lab-label">75g OGTT</span><input id="labOgtt" placeholder="mg/dL" /></div>
+              </div>
+            </div>
+          </div>
+          <aside class="howto">
+            <span class="icon">🧪</span>
+            <div>Enter CBC, urinalysis, and additional tests. Include units where applicable.</div>
+          </aside>
+        </div>
+      </div>
+    </section>
+
+    <!-- STEP 8 -->
+    <section class="form-step" data-step="7" id="step-icd">
+      <div class="step-header">
+        <span class="step-badge">Step 8</span>
+        <h2 class="step-title">Diagnosis Codes (ICD‑10 / ICD‑11)</h2>
+        <span class="step-counter" data-counter>8 / 9</span>
+      </div>
+      <div class="section-card">
+        <div class="form-layout">
+          <div class="form-content">
+            <div class="form-row">
+              <div class="form-group full icd-search-wrap">
+                <label>Search code or description</label>
+                <input id="icdSearch" placeholder="Type to filter… e.g. preeclampsia, O14, ectopic" autocomplete="off" />
+                <div class="icd-suggestions" id="icdSuggestions"></div>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group full">
+                <label>Selected Codes</label>
+                <div class="icd-selected" id="icdSelectedList">
+                  <span class="icd-empty">No codes selected yet.</span>
+                </div>
+                <input type="hidden" id="icdCodes" value="[]" />
+              </div>
+            </div>
+          </div>
+          <aside class="howto">
+            <span class="icon">🏷️</span>
+            <div>Type a <strong>diagnosis code or description</strong> → a dropdown appears. Click to add as a pill. Click ✕ on a pill to remove.</div>
+          </aside>
+        </div>
+      </div>
+    </section>
+
+    <!-- STEP 9 -->
+    <section class="form-step" data-step="8" id="step-final">
+      <div class="step-header">
+        <span class="step-badge">Step 9 · Final</span>
+        <h2 class="step-title">Ultrasound, Assessment &amp; Plan</h2>
+        <span class="step-counter" data-counter>9 / 9</span>
+      </div>
+      <div class="section-card">
+        <div class="form-layout">
+          <div class="form-content">
+            <div class="form-row"><div class="form-group full"><label>Ultrasound Findings</label><textarea id="fUs" rows="4" placeholder="Fetal biometry, position, placenta, fluid"></textarea></div></div>
+            <div class="form-row"><div class="form-group full"><label>Assessment</label><textarea id="fAssessment" rows="4" placeholder="Diagnoses, summary"></textarea></div></div>
+            <div class="form-row"><div class="form-group full"><label>Plan</label><textarea id="fPlan" rows="4" placeholder="Management, follow-up, interventions"></textarea></div></div>
+          </div>
+          <aside class="howto">
+            <span class="icon">📝</span>
+            <div>Summarize <strong>ultrasound findings</strong>, provide an <strong>assessment</strong>, and outline the <strong>plan</strong>. Then click the <strong>DOCX</strong> circle at bottom-right to export.</div>
+          </aside>
+        </div>
+      </div>
+    </section>
+  </form>
+</main>
+
+<!-- ═══════════ FIXED ACTION BUTTONS ═══════════ -->
+<div class="fixed-actions">
+  <div class="action-row">
+    <button type="button" class="circle-btn circle-back" id="btnBack" onclick="prevStep()" title="Back" aria-label="Back">←</button>
+    <span class="action-label" id="proceedLabel">Proceed to Chief Complaint &amp; HPI</span>
+    <button type="button" class="circle-btn circle-proceed" id="btnProceed" onclick="nextStep()" title="Proceed" aria-label="Proceed">→</button>
+  </div>
+  <div class="action-row">
+    <button type="button" class="circle-btn circle-docx" id="btnDocx" onclick="generateDocx()" title="Export to Word" aria-label="Export DOCX">
+      <span class="docx-text" id="docxText">DOCX</span>
+    </button>
+  </div>
+</div>
+
+<!-- ═══════════ TOAST ═══════════ -->
+<div class="toast" id="toast">
+  <span id="toastMsg">Ready</span>
+  <button class="toast-close" onclick="hideToast()">✕</button>
+</div>
+
+<script>
+/* ═══════════ THEME TOGGLE ═══════════ */
+function updateThemeUI(){
+  const t = document.documentElement.getAttribute('data-theme') || 'light';
+  const icon = document.getElementById('themeIcon');
+  const label = document.getElementById('themeLabel');
+  if (icon) icon.textContent = t === 'dark' ? '☀' : '🌙';
+  if (label) label.textContent = t === 'dark' ? 'Light Mode' : 'Dark Mode';
+}
+function toggleTheme(){
+  const cur = document.documentElement.getAttribute('data-theme') || 'light';
+  const next = cur === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  try { localStorage.setItem('ob-theme', next); } catch(e){}
+  updateThemeUI();
+}
+
+/* ═══════════ STEPS DATA ═══════════ */
+const STEPS = [
+  { id: 'step-patient',   label: 'Patient Info',        shortLabel: 'Patient Info',          icon: '👤' },
+  { id: 'step-cc',        label: 'CC & HPI',            shortLabel: 'Chief Complaint & HPI', icon: '📋' },
+  { id: 'step-history',   label: 'Past / Family',       shortLabel: 'Past, Family & Social', icon: '🧬' },
+  { id: 'step-menstrual', label: 'Menstrual / Sexual',  shortLabel: 'Menstrual & Sexual',    icon: '🩸' },
+  { id: 'step-ob',        label: 'OB History',          shortLabel: 'Obstetric History',     icon: '👶' },
+  { id: 'step-pe',        label: 'Physical Exam',       shortLabel: 'Physical Exam',         icon: '🩺' },
+  { id: 'step-labs',      label: 'Laboratory',          shortLabel: 'Laboratory',            icon: '🧪' },
+  { id: 'step-icd',       label: 'Diagnosis Codes',     shortLabel: 'Diagnosis Codes',       icon: '🏷️' },
+  { id: 'step-final',     label: 'Assessment & Plan',   shortLabel: 'Assessment & Plan',     icon: '📝' },
+];
+const TOTAL = STEPS.length;
+let currentStep = 0;
+
+(function(){
+  const menu = document.getElementById('sbMenu');
+  menu.innerHTML = STEPS.map((s,i) => `
+    <li>
+      <button type="button" class="sb-step" data-step="${i}" onclick="goToStep(${i})">
+        <span class="sb-num">${i+1}</span>
+        <span class="sb-icon">${s.icon}</span>
+        <span class="sb-label">${s.label}</span>
+      </button>
+    </li>`).join('');
+})();
+
+function goToStep(n){
+  if (n < 0 || n >= TOTAL) return;
+  currentStep = n;
+
+  document.querySelectorAll('.form-step').forEach((el, i) => {
+    el.classList.toggle('active', i === n);
+  });
+  document.querySelectorAll('.sb-step').forEach((el, i) => {
+    el.classList.toggle('active', i === n);
+    el.classList.toggle('completed', i < n);
+  });
+
+  const pct = ((n + 1) / TOTAL) * 100;
+  document.getElementById('sbProgressFill').style.width = pct + '%';
+  document.getElementById('sbProgressText').textContent = `${n + 1} / ${TOTAL}`;
+
+  updateActions();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  if (window.innerWidth <= 768) closeMobileSidebar();
+}
+
+function updateActions(){
+  const isFirst = currentStep === 0;
+  const isLast = currentStep === TOTAL - 1;
+
+  document.getElementById('btnBack').disabled = isFirst;
+
+  const proceedBtn = document.getElementById('btnProceed');
+  const label = document.getElementById('proceedLabel');
+
+  if (isLast){
+    proceedBtn.classList.add('complete');
+    proceedBtn.textContent = '✓';
+    label.textContent = 'All sections complete — Export DOCX';
+  } else {
+    proceedBtn.classList.remove('complete');
+    proceedBtn.textContent = '→';
+    label.textContent = `Proceed to ${STEPS[currentStep + 1].shortLabel}`;
+  }
+}
+
+function nextStep(){
+  if (currentStep === TOTAL - 1){
+    showToast('✅ All sections complete — click DOCX to export.', 'ok', 4000);
+    return;
+  }
+  goToStep(currentStep + 1);
+}
+function prevStep(){
+  if (currentStep > 0) goToStep(currentStep - 1);
+}
+
+function toggleSidebar(){ document.body.classList.toggle('sb-collapsed'); }
+function toggleMobileSidebar(){
+  const sb = document.getElementById('sidebar');
+  const open = sb.classList.toggle('open');
+  document.body.classList.toggle('sb-mobile-open', open);
+}
+function closeMobileSidebar(){
+  document.getElementById('sidebar').classList.remove('open');
+  document.body.classList.remove('sb-mobile-open');
+}
+
+let toastTimer = null;
+function showToast(msg, type, duration){
+  if (typeof type === 'number'){ duration = type; type = ''; }
+  duration = duration || 4000;
+  const el = document.getElementById('toast');
+  document.getElementById('toastMsg').textContent = msg;
+  el.classList.remove('ok','err');
+  if (type === 'ok') el.classList.add('ok');
+  if (type === 'err') el.classList.add('err');
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), duration);
+}
+function hideToast(){
+  document.getElementById('toast').classList.remove('show');
+  clearTimeout(toastTimer);
+}
+
+(function(){
+  const tbody = document.getElementById('obTableBody');
+  let html = '';
+  for (let i = 1; i <= 10; i++){
+    html += `<tr>
+      <td class="g-label">G${i}</td>
+      <td><input class="ob-year" placeholder="yr" /></td>
+      <td><input class="ob-sex" placeholder="M/F" /></td>
+      <td><input class="ob-outcome" placeholder="Outcome" /></td>
+      <td><input class="ob-mode" placeholder="Mode" /></td>
+      <td><input class="ob-place" placeholder="Place" /></td>
+      <td><input class="ob-fmc" placeholder="FMC" /></td>
+    </tr>`;
+  }
+  tbody.innerHTML = html;
+})();
+
+function addDays(date, days){
+  const d = new Date(date);
+  d.setDate(d.getDate() + days);
+  return d;
+}
+function fmtDate(d){
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const dd = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${dd}`;
+}
+function parseSonoEga(str){
+  const m = str.match(/(\d+)\s*w(?:\s*(\d+)\s*d)?/i);
+  if (!m) return null;
+  return { weeks: parseInt(m[1],10), days: m[2] ? parseInt(m[2],10) : 0 };
+}
+function updateFromLmp(){
+  const v = document.getElementById('fLmp').value;
+  if (!v) return;
+  const lmp = new Date(v);
+  if (isNaN(lmp)) return;
+  document.getElementById('fEdc').value = fmtDate(addDays(lmp, 280));
+  const diff = (new Date() - lmp) / 86400000;
+  document.getElementById('fAog').value = diff >= 0 ? (diff/7).toFixed(1) + ' wks' : '';
+}
+function updateFromSono(){
+  const sd = document.getElementById('fSonoDate').value;
+  const se = document.getElementById('fSonoEga').value.trim();
+  if (!sd || !se) return;
+  const date = new Date(sd);
+  if (isNaN(date)) return;
+  const p = parseSonoEga(se);
+  if (!p) return;
+  const remaining = 280 - (p.weeks * 7 + p.days);
+  if (remaining < 0) return;
+  document.getElementById('fEdc').value = fmtDate(addDays(date, remaining));
+}
+document.getElementById('fLmp').addEventListener('input', updateFromLmp);
+document.getElementById('fSonoDate').addEventListener('input', updateFromSono);
+document.getElementById('fSonoEga').addEventListener('input', updateFromSono);
+
+const ICD_CODES = [
+  { code:'O00.0', desc:'Abdominal pregnancy', system:'ICD-10' },
+  { code:'O00.1', desc:'Tubal pregnancy', system:'ICD-10' },
+  { code:'O00.2', desc:'Ovarian pregnancy', system:'ICD-10' },
+  { code:'O00.9', desc:'Ectopic pregnancy, unspecified', system:'ICD-10' },
+  { code:'O02.0', desc:'Missed abortion', system:'ICD-10' },
+  { code:'O02.1', desc:'Blighted ovum', system:'ICD-10' },
+  { code:'O03.0', desc:'Spontaneous abortion, incomplete', system:'ICD-10' },
+  { code:'O03.1', desc:'Spontaneous abortion, complete', system:'ICD-10' },
+  { code:'O03.9', desc:'Spontaneous abortion, unspecified', system:'ICD-10' },
+  { code:'O10.0', desc:'Pre-existing essential hypertension complicating pregnancy', system:'ICD-10' },
+  { code:'O10.9', desc:'Pre-existing hypertension in pregnancy, unspecified', system:'ICD-10' },
+  { code:'O11',   desc:'Pre-existing hypertension with superimposed pre-eclampsia', system:'ICD-10' },
+  { code:'O13',   desc:'Gestational hypertension without significant proteinuria', system:'ICD-10' },
+  { code:'O14.0', desc:'Mild pre-eclampsia', system:'ICD-10' },
+  { code:'O14.1', desc:'Severe pre-eclampsia', system:'ICD-10' },
+  { code:'O14.2', desc:'HELLP syndrome', system:'ICD-10' },
+  { code:'O14.9', desc:'Pre-eclampsia, unspecified', system:'ICD-10' },
+  { code:'O15.0', desc:'Eclampsia during pregnancy', system:'ICD-10' },
+  { code:'O15.1', desc:'Eclampsia during labor', system:'ICD-10' },
+  { code:'O15.2', desc:'Eclampsia during puerperium', system:'ICD-10' },
+  { code:'O20.0', desc:'Threatened abortion', system:'ICD-10' },
+  { code:'O20.9', desc:'Hemorrhage in early pregnancy, unspecified', system:'ICD-10' },
+  { code:'O21.0', desc:'Mild hyperemesis gravidarum', system:'ICD-10' },
+  { code:'O21.1', desc:'Hyperemesis gravidarum with metabolic disturbance', system:'ICD-10' },
+  { code:'O21.9', desc:'Hyperemesis gravidarum, unspecified', system:'ICD-10' },
+  { code:'O22.3', desc:'Deep vein thrombosis in pregnancy', system:'ICD-10' },
+  { code:'O23.0', desc:'Urinary tract infection in pregnancy', system:'ICD-10' },
+  { code:'O24.0', desc:'Pre-existing diabetes mellitus, type 1', system:'ICD-10' },
+  { code:'O24.1', desc:'Pre-existing diabetes mellitus, type 2', system:'ICD-10' },
+  { code:'O24.4', desc:'Gestational diabetes mellitus', system:'ICD-10' },
+  { code:'O24.9', desc:'Diabetes mellitus in pregnancy, unspecified', system:'ICD-10' },
+  { code:'O26.6', desc:'Pruritus in pregnancy', system:'ICD-10' },
+  { code:'O28.3', desc:'Abnormal ultrasound finding on antenatal screening', system:'ICD-10' },
+  { code:'O30.0', desc:'Twin pregnancy', system:'ICD-10' },
+  { code:'O30.1', desc:'Triplet pregnancy', system:'ICD-10' },
+  { code:'O30.9', desc:'Multiple pregnancy, unspecified', system:'ICD-10' },
+  { code:'O32.1', desc:'Maternal care for breech presentation', system:'ICD-10' },
+  { code:'O33.5', desc:'Maternal care for disproportion due to unusually large fetus', system:'ICD-10' },
+  { code:'O34.2', desc:'Maternal care for cervical incompetence', system:'ICD-10' },
+  { code:'O35.0', desc:'Maternal care for suspected CNS malformation in fetus', system:'ICD-10' },
+  { code:'O35.1', desc:'Maternal care for suspected chromosomal abnormality in fetus', system:'ICD-10' },
+  { code:'O36.0', desc:'Maternal care for rhesus isoimmunization', system:'ICD-10' },
+  { code:'O36.3', desc:'Maternal care for signs of fetal hypoxia', system:'ICD-10' },
+  { code:'O36.4', desc:'Maternal care for intrauterine death', system:'ICD-10' },
+  { code:'O36.5', desc:'Maternal care for poor fetal growth', system:'ICD-10' },
+  { code:'O36.6', desc:'Maternal care for excessive fetal growth', system:'ICD-10' },
+  { code:'O40',   desc:'Polyhydramnios', system:'ICD-10' },
+  { code:'O41.0', desc:'Oligohydramnios', system:'ICD-10' },
+  { code:'O41.1', desc:'Infection of amniotic sac and membranes', system:'ICD-10' },
+  { code:'O42.0', desc:'Premature rupture of membranes, labor within 24h', system:'ICD-10' },
+  { code:'O42.1', desc:'Premature rupture of membranes, labor after 24h', system:'ICD-10' },
+  { code:'O42.9', desc:'Premature rupture of membranes, unspecified', system:'ICD-10' },
+  { code:'O43.2', desc:'Morbidly adherent placenta', system:'ICD-10' },
+  { code:'O44.0', desc:'Placenta previa without hemorrhage', system:'ICD-10' },
+  { code:'O44.1', desc:'Placenta previa with hemorrhage', system:'ICD-10' },
+  { code:'O45.0', desc:'Premature separation of placenta with coagulation defect', system:'ICD-10' },
+  { code:'O45.8', desc:'Other premature separation of placenta', system:'ICD-10' },
+  { code:'O45.9', desc:'Premature separation of placenta, unspecified', system:'ICD-10' },
+  { code:'O46.0', desc:'Antepartum hemorrhage with coagulation defect', system:'ICD-10' },
+  { code:'O46.9', desc:'Antepartum hemorrhage, unspecified', system:'ICD-10' },
+  { code:'O48',   desc:'Post-term pregnancy', system:'ICD-10' },
+  { code:'O60.0', desc:'Preterm labor without delivery', system:'ICD-10' },
+  { code:'O60.1', desc:'Preterm labor with delivery', system:'ICD-10' },
+  { code:'O62.0', desc:'Primary uterine inertia', system:'ICD-10' },
+  { code:'O62.1', desc:'Secondary uterine inertia', system:'ICD-10' },
+  { code:'O62.9', desc:'Abnormality of forces of labor, unspecified', system:'ICD-10' },
+  { code:'O63.0', desc:'Prolonged first stage of labor', system:'ICD-10' },
+  { code:'O63.1', desc:'Prolonged second stage of labor', system:'ICD-10' },
+  { code:'O63.9', desc:'Prolonged labor, unspecified', system:'ICD-10' },
+  { code:'O64.1', desc:'Obstructed labor due to breech presentation', system:'ICD-10' },
+  { code:'O64.4', desc:'Obstructed labor due to shoulder presentation', system:'ICD-10' },
+  { code:'O65.4', desc:'Obstructed labor due to fetopelvic disproportion', system:'ICD-10' },
+  { code:'O66.0', desc:'Obstructed labor due to shoulder dystocia', system:'ICD-10' },
+  { code:'O66.2', desc:'Obstructed labor due to unusually large fetus', system:'ICD-10' },
+  { code:'O67.0', desc:'Intrapartum hemorrhage with coagulation defect', system:'ICD-10' },
+  { code:'O68.0', desc:'Labor complicated by fetal heart rate abnormality', system:'ICD-10' },
+  { code:'O68.1', desc:'Labor complicated by meconium in amniotic fluid', system:'ICD-10' },
+  { code:'O68.3', desc:'Labor and delivery complicated by fetal distress', system:'ICD-10' },
+  { code:'O69.0', desc:'Labor and delivery complicated by prolapse of cord', system:'ICD-10' },
+  { code:'O69.1', desc:'Labor and delivery complicated by cord around neck', system:'ICD-10' },
+  { code:'O69.4', desc:'Labor and delivery complicated by vasa previa', system:'ICD-10' },
+  { code:'O70.0', desc:'First-degree perineal laceration during delivery', system:'ICD-10' },
+  { code:'O70.1', desc:'Second-degree perineal laceration during delivery', system:'ICD-10' },
+  { code:'O70.2', desc:'Third-degree perineal laceration during delivery', system:'ICD-10' },
+  { code:'O70.3', desc:'Fourth-degree perineal laceration during delivery', system:'ICD-10' },
+  { code:'O71.0', desc:'Rupture of uterus before labor', system:'ICD-10' },
+  { code:'O71.1', desc:'Rupture of uterus during labor', system:'ICD-10' },
+  { code:'O71.2', desc:'Postpartum inversion of uterus', system:'ICD-10' },
+  { code:'O71.4', desc:'Obstetric laceration of vagina', system:'ICD-10' },
+  { code:'O72.0', desc:'Third-stage hemorrhage', system:'ICD-10' },
+  { code:'O72.1', desc:'Other immediate postpartum hemorrhage', system:'ICD-10' },
+  { code:'O72.2', desc:'Delayed postpartum hemorrhage', system:'ICD-10' },
+  { code:'O72.3', desc:'Postpartum hemorrhage with coagulation defect', system:'ICD-10' },
+  { code:'O72.9', desc:'Postpartum hemorrhage, unspecified', system:'ICD-10' },
+  { code:'O73.0', desc:'Retained placenta without hemorrhage', system:'ICD-10' },
+  { code:'O73.1', desc:'Retained placenta with hemorrhage', system:'ICD-10' },
+  { code:'O75.9', desc:'Complication of labor and delivery, unspecified', system:'ICD-10' },
+  { code:'O80',   desc:'Single spontaneous delivery', system:'ICD-10' },
+  { code:'O81.0', desc:'Low forceps delivery', system:'ICD-10' },
+  { code:'O81.4', desc:'Vacuum extractor delivery', system:'ICD-10' },
+  { code:'O81.9', desc:'Instrumental delivery, unspecified', system:'ICD-10' },
+  { code:'O82.0', desc:'Elective cesarean section', system:'ICD-10' },
+  { code:'O82.1', desc:'Emergency cesarean section', system:'ICD-10' },
+  { code:'O82.2', desc:'Cesarean section with hysterectomy', system:'ICD-10' },
+  { code:'O82.9', desc:'Cesarean section, unspecified', system:'ICD-10' },
+  { code:'O85',   desc:'Puerperal sepsis', system:'ICD-10' },
+  { code:'O86.0', desc:'Infection of obstetric surgical wound', system:'ICD-10' },
+  { code:'O86.2', desc:'Urinary tract infection following delivery', system:'ICD-10' },
+  { code:'O86.9', desc:'Puerperal infection, unspecified', system:'ICD-10' },
+  { code:'O87.1', desc:'Deep phlebothrombosis in puerperium', system:'ICD-10' },
+  { code:'O88.1', desc:'Amniotic fluid embolism', system:'ICD-10' },
+  { code:'O88.2', desc:'Obstetric blood-clot embolism', system:'ICD-10' },
+  { code:'O88.9', desc:'Obstetric embolism, unspecified', system:'ICD-10' },
+  { code:'O90.0', desc:'Disruption of cesarean section wound', system:'ICD-10' },
+  { code:'O90.1', desc:'Disruption of perineal obstetric wound', system:'ICD-10' },
+  { code:'O90.3', desc:'Peripartum cardiomyopathy', system:'ICD-10' },
+  { code:'O90.9', desc:'Puerperal complication, unspecified', system:'ICD-10' },
+  { code:'O91.1', desc:'Abscess of breast associated with lactation', system:'ICD-10' },
+  { code:'O91.2', desc:'Nonpurulent mastitis associated with lactation', system:'ICD-10' },
+  { code:'O92.3', desc:'Agalactia', system:'ICD-10' },
+  { code:'O92.4', desc:'Hypogalactia', system:'ICD-10' },
+  { code:'O94',   desc:'Sequelae of complications of pregnancy, childbirth, and puerperium', system:'ICD-10' },
+  { code:'O98.4', desc:'Viral hepatitis complicating pregnancy, childbirth, and puerperium', system:'ICD-10' },
+  { code:'O98.7', desc:'HIV disease complicating pregnancy, childbirth, and puerperium', system:'ICD-10' },
+  { code:'O99.0', desc:'Anemia complicating pregnancy, childbirth, and puerperium', system:'ICD-10' },
+  { code:'O99.2', desc:'Endocrine and metabolic diseases complicating pregnancy', system:'ICD-10' },
+  { code:'O99.4', desc:'Diseases of the circulatory system complicating pregnancy', system:'ICD-10' },
+  { code:'O99.9', desc:'Maternal disease complicating pregnancy, unspecified', system:'ICD-10' },
+  { code:'JB40.0', desc:'Ectopic pregnancy', system:'ICD-11' },
+  { code:'JB40.1', desc:'Tubal pregnancy', system:'ICD-11' },
+  { code:'JB42.0', desc:'Spontaneous abortion', system:'ICD-11' },
+  { code:'JB42.1', desc:'Missed abortion', system:'ICD-11' },
+  { code:'JB44.0', desc:'Gestational diabetes mellitus', system:'ICD-11' },
+  { code:'JB45.0', desc:'Pre-eclampsia', system:'ICD-11' },
+  { code:'JB45.1', desc:'Eclampsia', system:'ICD-11' },
+  { code:'JB46.0', desc:'Placenta previa', system:'ICD-11' },
+  { code:'JB46.1', desc:'Placental abruption', system:'ICD-11' },
+  { code:'JB47.0', desc:'Antepartum hemorrhage', system:'ICD-11' },
+  { code:'JB48.0', desc:'Postpartum hemorrhage', system:'ICD-11' },
+  { code:'JB49.0', desc:'Retained placenta', system:'ICD-11' },
+  { code:'JB50.0', desc:'Puerperal sepsis', system:'ICD-11' },
+  { code:'JB51.0', desc:'Obstetric embolism', system:'ICD-11' },
+  { code:'JB52.0', desc:'Obstetric trauma', system:'ICD-11' },
+  { code:'JB53.0', desc:'Uterine rupture', system:'ICD-11' },
+  { code:'JB54.0', desc:'Perineal laceration', system:'ICD-11' },
+  { code:'JB55.0', desc:'Obstructed labor', system:'ICD-11' },
+  { code:'JB56.0', desc:'Prolonged labor', system:'ICD-11' },
+  { code:'JB57.0', desc:'Fetal distress', system:'ICD-11' },
+  { code:'JB58.0', desc:'Meconium aspiration', system:'ICD-11' },
+  { code:'JB59.0', desc:'Neonatal jaundice', system:'ICD-11' },
+];
+
+const icdSearch = document.getElementById('icdSearch');
+const icdSuggestions = document.getElementById('icdSuggestions');
+const icdSelectedList = document.getElementById('icdSelectedList');
+const icdCodesHidden = document.getElementById('icdCodes');
+let selectedCodes = [];
+
+function renderSuggestions(q){
+  const query = q.toLowerCase().trim();
+  const matches = ICD_CODES.filter(item =>
+    item.code.toLowerCase().includes(query) ||
+    item.desc.toLowerCase().includes(query)
+  ).slice(0, 12);
+
+  if (matches.length === 0 || query.length < 1){
+    icdSuggestions.classList.remove('show');
+    icdSuggestions.innerHTML = '';
+    return;
+  }
+  icdSuggestions.innerHTML = matches.map(item =>
+    `<div class="suggestion-item" data-code="${item.code}" data-desc="${item.desc}" data-system="${item.system}">
+      <span class="code">${item.code}</span>
+      <span class="desc">${item.desc}</span>
+      <span class="system">${item.system}</span>
+    </div>`
+  ).join('');
+  icdSuggestions.classList.add('show');
+
+  icdSuggestions.querySelectorAll('.suggestion-item').forEach(el => {
+    el.addEventListener('click', function(){
+      addCode(this.dataset.code, this.dataset.desc, this.dataset.system);
+      icdSearch.value = '';
+      icdSuggestions.classList.remove('show');
+    });
+  });
+}
+function addCode(code, desc, system){
+  if (selectedCodes.some(c => c.code === code)) return;
+  selectedCodes.push({ code, desc, system });
+  updateSelectedUI();
+}
+function removeCode(code){
+  selectedCodes = selectedCodes.filter(c => c.code !== code);
+  updateSelectedUI();
+}
+function updateSelectedUI(){
+  if (selectedCodes.length === 0){
+    icdSelectedList.innerHTML = '<span class="icd-empty">No codes selected yet.</span>';
+  } else {
+    icdSelectedList.innerHTML = selectedCodes.map(item =>
+      `<span class="icd-pill">
+        <span class="code">${item.code}</span>
+        <span>${item.desc}</span>
+        <button type="button" class="remove" data-code="${item.code}">✕</button>
+      </span>`
+    ).join('');
+    icdSelectedList.querySelectorAll('.remove').forEach(btn => {
+      btn.addEventListener('click', function(){ removeCode(this.dataset.code); });
+    });
+  }
+  icdCodesHidden.value = JSON.stringify(selectedCodes);
+}
+icdSearch.addEventListener('input', function(){ renderSuggestions(this.value); });
+icdSearch.addEventListener('blur', function(){
+  setTimeout(() => icdSuggestions.classList.remove('show'), 200);
+});
+icdSearch.addEventListener('focus', function(){
+  if (this.value.trim().length > 0) renderSuggestions(this.value);
+});
+
+function getFormData(){
+  const g = (id) => document.getElementById(id)?.value || '';
+  const obRows = [];
+  document.querySelectorAll('#obTableBody tr').forEach(row => {
+    const inputs = row.querySelectorAll('input');
+    if (inputs.length >= 6){
+      const r = {
+        year: inputs[0].value || '',
+        sex: inputs[1].value || '',
+        outcome: inputs[2].value || '',
+        mode: inputs[3].value || '',
+        place: inputs[4].value || '',
+        fmc: inputs[5].value || ''
+      };
+      if (Object.values(r).some(v => v)) obRows.push(r);
+    }
+  });
+  let icdList = [];
+  try {
+    const v = document.getElementById('icdCodes').value || '[]';
+    icdList = JSON.parse(v);
+  } catch(e){ icdList = []; }
+
+  return {
+    contact: g('fContact'), hosp: g('fHosp'), name: g('fName'),
+    date: g('fDate'), age: g('fAge'), address: g('fAddress'),
+    consultant: g('fConsultant'), residents: g('fResidents'),
+    lmp: g('fLmp'), aog: g('fAog'), edc: g('fEdc'),
+    sonoDate: g('fSonoDate'), sonoEga: g('fSonoEga'),
+    cc: g('fCc'), hpi1: g('fHpi1'), hpi2: g('fHpi2'), hpi3: g('fHpi3'),
+    pmh: g('fPmh'), fh: g('fFh'), sh: g('fSh'),
+    menarche: g('fMenarche'), regular: g('fRegular'), duration: g('fDuration'),
+    pads: g('fPads'), dysmenorrhea: g('fDysmenorrhea'),
+    sexFirst: g('fSexFirst'), sexPartner: g('fSexPartner'), ocp: g('fOcp'),
+    std: g('fStd'), dyspareunia: g('fDyspareunia'), pcb: g('fPcb'),
+    gravida: g('fGravida'), para: g('fPara'),
+    pncCount: g('fPncCount'), pncWhere: g('fPncWhere'),
+    obRows, icdCodes: icdList,
+    bp: g('fBp'), hr: g('fHr'), rr: g('fRr'), temp: g('fTemp'),
+    sheent: g('fSheent'), chest: g('fChest'), heart: g('fHeart'),
+    abdomen: g('fAbdomen'), spec: g('fSpec'), ie: g('fIe'),
+    extrem: g('fExtrem'), others: g('fOthers'),
+    lab: {
+      hgb: g('labHgb'), hct: g('labHct'), wbc: g('labWbc'), plt: g('labPlt'),
+      ec: g('labEc'), pc: g('labPc'), rbc: g('labRbc'), bac: g('labBac'),
+      blood: g('labBlood'), hbsag: g('labHbsag'), vdrl: g('labVdrl'), ogtt: g('labOgtt')
+    },
+    us: g('fUs'), assessment: g('fAssessment'), plan: g('fPlan')
+  };
+}
+
+function resetForm(){
+  if (!confirm('Clear all form fields?')) return;
+  document.querySelectorAll('#obForm input, #obForm textarea').forEach(el => {
+    if (el.readOnly) return;
+    if (el.id === 'icdSearch') return;
+    el.value = '';
+  });
+  document.querySelectorAll('.ob-table td input').forEach(el => el.value = '');
+  selectedCodes = [];
+  updateSelectedUI();
+  icdSearch.value = '';
+  icdSuggestions.classList.remove('show');
+  goToStep(0);
+  showToast('Form reset.', 'ok', 2500);
+}
+
+function generateDocx(){
+  const btn = document.getElementById('btnDocx');
+  const txt = document.getElementById('docxText');
+  const original = txt.textContent;
+
+  const data = getFormData();
+
+  if (!data.name){
+    showToast('⚠ Please enter patient name (Step 1) before exporting.', 'err', 4000);
+    goToStep(0);
+    setTimeout(() => document.getElementById('fName').focus(), 400);
+    return;
+  }
+
+  btn.disabled = true;
+  txt.innerHTML = '<span class="spin"></span>';
+  showToast('Building Word document…', 5000);
+
+  try {
+    const htmlContent = buildDocHtml(data);
+    const blob = new Blob([htmlContent], { type: 'application/msword' });
+    const safeName = (data.name || 'patient').replace(/[^a-zA-Z0-9]/g, '_').substring(0, 40);
+    const filename = `OB_History_PE_${safeName}_${new Date().toISOString().slice(0,10)}.doc`;
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+
+    showToast('✅ Document generated — check your downloads.', 'ok', 4000);
+  } catch(err){
+    console.error(err);
+    showToast('❌ Error: ' + err.message, 'err', 5000);
+  } finally {
+    setTimeout(() => {
+      btn.disabled = false;
+      txt.textContent = original;
+    }, 700);
+  }
+}
+
+function esc(s){
+  return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function nl(v){ return esc(v) || '—'; }
+
+function buildDocHtml(d){
+  const fmtDate = (v) => v ? v.replace(/-/g,'/') : '';
+
+  let obRowsHtml = '';
+  if (d.obRows.length){
+    obRowsHtml = d.obRows.map((row, i) => `<tr>
+      <td style="border:1px solid #aaa;padding:4px 6px;text-align:center;font-weight:600;">G${i+1}</td>
+      <td style="border:1px solid #aaa;padding:4px 6px;text-align:center;">${nl(row.year)}</td>
+      <td style="border:1px solid #aaa;padding:4px 6px;text-align:center;">${nl(row.sex)}</td>
+      <td style="border:1px solid #aaa;padding:4px 6px;text-align:center;">${nl(row.outcome)}</td>
+      <td style="border:1px solid #aaa;padding:4px 6px;text-align:center;">${nl(row.mode)}</td>
+      <td style="border:1px solid #aaa;padding:4px 6px;text-align:center;">${nl(row.place)}</td>
+      <td style="border:1px solid #aaa;padding:4px 6px;text-align:center;">${nl(row.fmc)}</td>
+    </tr>`).join('');
+  } else {
+    obRowsHtml = '<tr><td colspan="7" style="border:1px solid #aaa;padding:6px;text-align:center;color:#888;">No pregnancies recorded</td></tr>';
+  }
+
+  let icdHtml = '';
+  if (d.icdCodes.length){
+    icdHtml = '<ul style="padding-left:20px;margin:4px 0;">' +
+      d.icdCodes.map(c => `<li><strong>${esc(c.code)}</strong> (${esc(c.system)}) — ${esc(c.desc)}</li>`).join('') +
+      '</ul>';
+  } else {
+    icdHtml = '<p style="color:#888;font-style:italic;">No codes selected.</p>';
+  }
+
+  return `<!DOCTYPE html>
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+<meta charset="utf-8">
+<title>OB History &amp; PE</title>
+<style>
+  @page { size: 8.5in 11in; margin: 1in; }
+  body { font-family: Georgia, 'Times New Roman', serif; font-size: 11pt; line-height: 1.4; color: #1a1a1a; }
+  h1 { font-size: 18pt; font-weight: 700; color: #1a3a5c; border-bottom: 2px solid #1a3a5c; padding-bottom: 4px; margin: 0 0 4px 0; }
+  .subhead { font-size: 10pt; color: #555; font-style: italic; margin-bottom: 14px; }
+  h2 { font-size: 13pt; font-weight: 600; color: #1a3a5c; border-bottom: 1px solid #ccc; padding-bottom: 3px; margin: 14px 0 6px 0; }
+  .kv { margin: 2px 0; font-size: 10.5pt; }
+  .kv strong { color: #333; display: inline-block; min-width: 130px; }
+  table.ob { border-collapse: collapse; width: 100%; font-size: 9.5pt; margin-top: 6px; }
+  table.ob th, table.ob td { border: 1px solid #aaa; padding: 4px 6px; text-align: center; }
+  table.ob th { background: #eef3f7; font-weight: 600; }
+  table.labs { border-collapse: separate; border-spacing: 8px 0; width: 100%; margin-top: 4px; }
+  table.labs td { border: 1px solid #ccc; padding: 8px 10px; background: #f9fafb; vertical-align: top; width: 33%; }
+  table.labs h4 { margin: 0 0 6px 0; font-size: 10pt; color: #1a3a5c; }
+  .lab-row { padding: 2px 0; font-size: 10pt; border-bottom: 1px dashed #eee; }
+  .lab-row span.lbl { color: #555; display: inline-block; min-width: 80px; }
+  .icd-list { margin: 4px 0; }
+  .footer { margin-top: 18px; padding-top: 8px; border-top: 1px solid #ddd; text-align: center; font-size: 9pt; color: #888; }
+</style>
+</head>
+<body>
+
+<h1>OBSTETRIC HISTORY &amp; PHYSICAL EXAMINATION</h1>
+<div class="subhead">Problem‑Oriented Medical Record · PLE‑style</div>
+
+<h2>Patient Information</h2>
+<div class="kv"><strong>Name:</strong> ${nl(d.name)}</div>
+<div class="kv"><strong>Age:</strong> ${nl(d.age)}</div>
+<div class="kv"><strong>Address:</strong> ${nl(d.address)}</div>
+<div class="kv"><strong>Contact No.:</strong> ${nl(d.contact)}</div>
+<div class="kv"><strong>Hospital #:</strong> ${nl(d.hosp)}</div>
+<div class="kv"><strong>Date:</strong> ${fmtDate(d.date) || '—'}</div>
+<div class="kv"><strong>Consultant:</strong> ${nl(d.consultant)}</div>
+<div class="kv"><strong>Residents-in-Charge:</strong> ${nl(d.residents)}</div>
+<div class="kv"><strong>LMP:</strong> ${fmtDate(d.lmp) || '—'}</div>
+<div class="kv"><strong>AOG:</strong> ${nl(d.aog)}</div>
+<div class="kv"><strong>EDC:</strong> ${fmtDate(d.edc) || '—'}</div>
+<div class="kv"><strong>Sono Date:</strong> ${fmtDate(d.sonoDate) || '—'}</div>
+<div class="kv"><strong>Sono EGA:</strong> ${nl(d.sonoEga)}</div>
+
+<h2>Chief Complaint &amp; HPI</h2>
+<div class="kv"><strong>Chief Complaint:</strong> ${nl(d.cc)}</div>
+<div class="kv"><strong>1st Trimester:</strong> ${nl(d.hpi1)}</div>
+<div class="kv"><strong>2nd Trimester:</strong> ${nl(d.hpi2)}</div>
+<div class="kv"><strong>3rd Trimester:</strong> ${nl(d.hpi3)}</div>
+
+<h2>Past, Family &amp; Social History</h2>
+<div class="kv"><strong>Past Medical:</strong> ${nl(d.pmh)}</div>
+<div class="kv"><strong>Family:</strong> ${nl(d.fh)}</div>
+<div class="kv"><strong>Personal / Social:</strong> ${nl(d.sh)}</div>
+
+<h2>Menstrual &amp; Sexual History</h2>
+<div class="kv"><strong>Menarche:</strong> ${nl(d.menarche)}</div>
+<div class="kv"><strong>Regularity:</strong> ${nl(d.regular)}</div>
+<div class="kv"><strong>Duration (days):</strong> ${nl(d.duration)}</div>
+<div class="kv"><strong>Pads/day:</strong> ${nl(d.pads)}</div>
+<div class="kv"><strong>Dysmenorrhea:</strong> ${nl(d.dysmenorrhea)}</div>
+<div class="kv"><strong>1st sexual contact:</strong> ${nl(d.sexFirst)}</div>
+<div class="kv"><strong>Partner(s):</strong> ${nl(d.sexPartner)}</div>
+<div class="kv"><strong>OCP use:</strong> ${nl(d.ocp)}</div>
+<div class="kv"><strong>STD history:</strong> ${nl(d.std)}</div>
+<div class="kv"><strong>Dyspareunia:</strong> ${nl(d.dyspareunia)}</div>
+<div class="kv"><strong>PCB:</strong> ${nl(d.pcb)}</div>
+
+<h2>Obstetric History</h2>
+<div class="kv"><strong>G (Gravida):</strong> ${nl(d.gravida)} &nbsp;&nbsp; <strong>P (Para):</strong> ${nl(d.para)}</div>
+<div class="kv"><strong>PNCU:</strong> ${nl(d.pncCount)} visits at ${nl(d.pncWhere)}</div>
+<table class="ob">
+  <thead><tr><th>G#</th><th>Year</th><th>Sex</th><th>Outcome</th><th>Mode</th><th>Place</th><th>FMC</th></tr></thead>
+  <tbody>${obRowsHtml}</tbody>
+</table>
+
+<h2>Physical Examination</h2>
+<div class="kv"><strong>BP:</strong> ${nl(d.bp)} mmHg &nbsp; <strong>HR:</strong> ${nl(d.hr)} bpm &nbsp; <strong>RR:</strong> ${nl(d.rr)} cpm &nbsp; <strong>Temp:</strong> ${nl(d.temp)} °C</div>
+<div class="kv"><strong>SHEENT:</strong> ${nl(d.sheent)}</div>
+<div class="kv"><strong>Chest/Lungs:</strong> ${nl(d.chest)}</div>
+<div class="kv"><strong>Heart:</strong> ${nl(d.heart)}</div>
+<div class="kv"><strong>Abdomen:</strong> ${nl(d.abdomen)}</div>
+<div class="kv"><strong>Speculum:</strong> ${nl(d.spec)}</div>
+<div class="kv"><strong>Internal Exam:</strong> ${nl(d.ie)}</div>
+<div class="kv"><strong>Extremities:</strong> ${nl(d.extrem)}</div>
+<div class="kv"><strong>Others:</strong> ${nl(d.others)}</div>
+
+<h2>Laboratory Results</h2>
+<table class="labs">
+  <tr>
+    <td>
+      <h4>CBC</h4>
+      <div class="lab-row"><span class="lbl">Hgb</span> ${nl(d.lab.hgb)}</div>
+      <div class="lab-row"><span class="lbl">Hct</span> ${nl(d.lab.hct)}</div>
+      <div class="lab-row"><span class="lbl">WBC</span> ${nl(d.lab.wbc)}</div>
+      <div class="lab-row"><span class="lbl">Plt</span> ${nl(d.lab.plt)}</div>
+    </td>
+    <td>
+      <h4>Urinalysis</h4>
+      <div class="lab-row"><span class="lbl">EC</span> ${nl(d.lab.ec)}</div>
+      <div class="lab-row"><span class="lbl">PC</span> ${nl(d.lab.pc)}</div>
+      <div class="lab-row"><span class="lbl">RBC</span> ${nl(d.lab.rbc)}</div>
+      <div class="lab-row"><span class="lbl">Bac</span> ${nl(d.lab.bac)}</div>
+    </td>
+    <td>
+      <h4>Others</h4>
+      <div class="lab-row"><span class="lbl">Blood type</span> ${nl(d.lab.blood)}</div>
+      <div class="lab-row"><span class="lbl">HbsAg</span> ${nl(d.lab.hbsag)}</div>
+      <div class="lab-row"><span class="lbl">VDRL/RPR</span> ${nl(d.lab.vdrl)}</div>
+      <div class="lab-row"><span class="lbl">75g OGTT</span> ${nl(d.lab.ogtt)}</div>
+    </td>
+  </tr>
+</table>
+
+<h2>Diagnosis Codes (ICD‑10 / ICD‑11)</h2>
+<div class="icd-list">${icdHtml}</div>
+
+<h2>Ultrasound, Assessment &amp; Plan</h2>
+<div class="kv"><strong>Ultrasound:</strong> ${nl(d.us)}</div>
+<div class="kv"><strong>Assessment:</strong> ${nl(d.assessment)}</div>
+<div class="kv"><strong>Plan:</strong> ${nl(d.plan)}</div>
+
+<div class="footer">OB‑GYN History &amp; Physical · Digital Form · Generated ${new Date().toLocaleDateString()}</div>
+
+</body>
+</html>`;
+}
+
+document.addEventListener('keydown', (e) => {
+  const tag = e.target.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+  if (e.key === 'ArrowRight') nextStep();
+  if (e.key === 'ArrowLeft') prevStep();
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') generateDocx();
+});
+
+window.addEventListener('DOMContentLoaded', () => {
+  goToStep(0);
+  updateSelectedUI();
+  updateThemeUI();
+});
+</script>
+</body>
+</html>
